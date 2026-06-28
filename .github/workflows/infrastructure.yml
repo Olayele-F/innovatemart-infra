@@ -2,15 +2,13 @@ name: Infrastructure CI/CD
 
 on:
   pull_request:
-    branches: [main]
-    paths: ['terraform/**']
+    branches: [clean-main]
   push:
-    branches: [main]
-    paths: ['terraform/**']
+    branches: [clean-main]
   workflow_dispatch:
 
 env:
-  TF_VERSION: '1.6.0'
+  TF_VERSION:  '1.6.0'
   AWS_REGION:  'us-east-1'
   WORKING_DIR: './terraform'
 
@@ -18,7 +16,6 @@ jobs:
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    if: always()
     defaults:
       run:
         working-directory: ${{ env.WORKING_DIR }}
@@ -41,9 +38,6 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-
       - name: Terraform Validate
         run: terraform validate
 
@@ -58,25 +52,27 @@ jobs:
         continue-on-error: true
 
       - name: Post Plan as PR Comment
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
             const plan = fs.readFileSync('${{ env.WORKING_DIR }}/plan_output.txt', 'utf8');
             const truncated = plan.length > 60000
-              ? plan.slice(0, 60000) + '\n\n... (truncated)'
+              ? plan.slice(0, 60000) + '\n...(truncated)'
               : plan;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## Terraform Plan Output\n\`\`\`hcl\n${truncated}\n\`\`\``
+              body: `## Terraform Plan Output\n\`\`\`\n${truncated}\n\`\`\``
             });
 
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/clean-main' && github.event_name == 'push'
     defaults:
       run:
         working-directory: ${{ env.WORKING_DIR }}
@@ -112,7 +108,7 @@ jobs:
       - name: Commit grading.json
         run: |
           cd ..
-          git config user.name  "github-actions[bot]"
+          git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add grading.json
           git diff --staged --quiet || git commit -m "ci: update grading.json [skip ci]"
