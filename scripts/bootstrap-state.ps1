@@ -34,8 +34,18 @@ aws s3api put-public-access-block `
   --public-access-block-configuration "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
 
 # Enable encryption
+# Enable encryption
 Log "Enabling encryption..."
-$encryptionConfig = '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+$encryptionConfig = @{
+    Rules = @(
+        @{
+            ApplyServerSideEncryptionByDefault = @{
+                SSEAlgorithm = "AES256"
+            }
+        }
+    )
+} | ConvertTo-Json -Compress
+
 aws s3api put-bucket-encryption `
   --bucket $BucketName `
   --server-side-encryption-configuration $encryptionConfig
