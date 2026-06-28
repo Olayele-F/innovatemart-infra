@@ -16,7 +16,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "project-bedrock-tfstate-alt-soe-025-4637"
+    bucket = "project-bedrock-tfstate-id-alt-soe-025-4637"
     key    = "production/terraform.tfstate"
     region = "us-east-1"
     # S3 versioning handles state locking (DynamoDB not required per brief)
